@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinScope — 股票分析平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Token System ─────────────────────────────────────── */
+    :root {
+      --bg-base:      #0a0d14;
+      --bg-surface:   #0f1420;
+      --bg-panel:     #141926;
+      --bg-card:      #1a2133;
+      --bg-hover:     #1f2840;
+
+      --accent-gold:  #e8b84b;
+      --accent-teal:  #00c2a0;
+      --accent-blue:  #4a9eff;
+      --accent-red:   #ff5f57;
+
+      --text-primary: #eef2ff;
+      --text-secondary: #8892a4;
+      --text-muted:   #4a5568;
+
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-light:  rgba(255,255,255,0.10);
+
+      --glow-gold: 0 0 24px rgba(232,184,75,0.18);
+      --glow-teal: 0 0 24px rgba(0,194,160,0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Ambient grid background ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Radial glow orbs ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(232,184,75,0.07), transparent 70%);
+      top: -200px; left: -150px;
+    }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,194,160,0.06), transparent 70%);
+      bottom: 0; right: -100px;
+    }
+
+    /* ─── Layout ─── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 36px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent-gold), #c8920a);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: var(--glow-gold);
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+    }
+
+    .logo-text span {
+      color: var(--accent-gold);
+    }
+
+    .logo-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: rgba(0,194,160,0.08);
+      border: 1px solid rgba(0,194,160,0.18);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--accent-teal);
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      background: var(--accent-teal);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .market-strip {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .mkt-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .mkt-label { color: var(--text-muted); }
+    .mkt-up   { color: var(--accent-teal); }
+    .mkt-dn   { color: var(--accent-red); }
+
+    /* ─── Section title ─── */
+    .section-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .section-sub {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    /* ─── Tab navigation ─── */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 5px;
+      margin-bottom: 28px;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    .tab-btn.active .tab-icon {
+      color: var(--accent-gold);
+    }
+
+    .tab-icon { font-size: 15px; }
+
+    /* ─── Tab content ─── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ─── App card ─── */
+    .app-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.4);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .app-card:hover {
+      box-shadow: 0 8px 60px rgba(0,0,0,0.5);
+    }
+
+    .app-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .app-card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .app-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(232,184,75,0.12);
+      color: var(--accent-gold);
+      border: 1px solid rgba(232,184,75,0.2);
+    }
+
+    .app-badge.teal {
+      background: rgba(0,194,160,0.10);
+      color: var(--accent-teal);
+      border-color: rgba(0,194,160,0.2);
+    }
+
+    .app-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-ctrl {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .dc-r { background: #ff5f57; }
+    .dc-y { background: #febc2e; }
+    .dc-g { background: #28c840; }
+
+    .iframe-wrap {
+      position: relative;
+      width: 100%;
+      background: #fff;
+    }
+
+    .iframe-wrap iframe {
+      width: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ─── Stats row ─── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      background: var(--bg-card);
+      border-color: var(--border-light);
+      transform: translateY(-1px);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-change {
+      font-size: 12px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .chg-up { color: var(--accent-teal); }
+    .chg-dn { color: var(--accent-red); }
+
+    /* ─── Feature tags ─── */
+    .features-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .feat-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .feat-icon { font-size: 13px; }
+
+    /* ─── Both panels side-by-side toggle for "全覽" ─── */
+    .dual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* ─── Footer ─── */
+    footer {
+      margin-top: 52px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-left {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-left strong {
+      color: var(--text-secondary);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent-gold);
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--bg-hover); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 1024px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .dual-grid { grid-template-columns: 1fr; }
+      .market-strip { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      header { flex-wrap: wrap; gap: 12px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .tab-nav { width: 100%; overflow-x: auto; }
+      .section-title { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="wrapper">
+
+    <!-- ── Header ── -->
+    <header>
+      <div class="logo">
+        <div class="logo-mark">📈</div>
+        <div>
+          <div class="logo-text">Fin<span>Scope</span></div>
+          <div class="logo-tagline">台股 · 美股 · 技術分析平台</div>
+        </div>
+      </div>
+
+      <div class="header-meta">
+        <div class="market-strip">
+          <div class="mkt-item">
+            <span class="mkt-label">台積電</span>
+            <span class="mkt-up">▲ 980</span>
+          </div>
+          <div class="mkt-item">
+            <span class="mkt-label">NVDA</span>
+            <span class="mkt-up">▲ 135.4</span>
+          </div>
+          <div class="mkt-item">
+            <span class="mkt-label">AAPL</span>
+            <span class="mkt-dn">▼ 193.7</span>
+          </div>
+          <div class="mkt-item">
+            <span class="mkt-label">TSLA</span>
+            <span class="mkt-up">▲ 248.6</span>
+          </div>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          系統運行中
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Stats Row ── -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">支援指標數量</div>
+        <div class="stat-value">12+</div>
+        <div class="stat-change chg-up">↑ RSI · MACD · ADX · BB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">可查股票市場</div>
+        <div class="stat-value">30+</div>
+        <div class="stat-change chg-up">↑ 台股 · 美股 · 港股</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">報告格式</div>
+        <div class="stat-value">Excel</div>
+        <div class="stat-change chg-up">↑ 彩色標記 · 即時下載</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">資料來源</div>
+        <div class="stat-value">yFinance</div>
+        <div class="stat-change chg-up">↑ 即時行情 · 歷史資料</div>
+      </div>
+    </div>
+
+    <!-- ── Tab Navigation ── -->
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" onclick="switchTab('index')" role="tab">
+        <span class="tab-icon">📊</span>
+        技術指標分析
+      </button>
+      <button class="tab-btn" onclick="switchTab('data')" role="tab">
+        <span class="tab-icon">🔐</span>
+        股票數據查詢
+      </button>
+      <button class="tab-btn" onclick="switchTab('both')" role="tab">
+        <span class="tab-icon">⚡</span>
+        雙工具全覽
+      </button>
+    </nav>
+
+    <!-- ── Tab Panel: 技術指標分析 ── -->
+    <div id="panel-index" class="tab-panel active">
+      <div class="section-eyebrow">Module 01</div>
+      <div class="section-title">📊 股票技術指標分析</div>
+      <div class="section-sub">輸入股票代碼，自動計算多項技術指標，並產生帶彩色標記的 Excel 報告。台股請加 <code style="font-family:'JetBrains Mono',monospace;color:var(--accent-gold);background:rgba(232,184,75,0.08);padding:1px 6px;border-radius:3px">.TW</code> 後綴。</div>
+
+      <div class="features-row">
+        <div class="feat-tag"><span class="feat-icon">📐</span> RSI 相對強弱指標</div>
+        <div class="feat-tag"><span class="feat-icon">📉</span> 布林帶 %B</div>
+        <div class="feat-tag"><span class="feat-icon">📈</span> ADX 趨勢強度</div>
+        <div class="feat-tag"><span class="feat-icon">🔁</span> CCI 順勢指標</div>
+        <div class="feat-tag"><span class="feat-icon">📁</span> 匯出 Excel 報告</div>
+        <div class="feat-tag"><span class="feat-icon">🎨</span> 彩色標記分級</div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-card-header">
+          <div class="app-card-title">
+            <span>📊</span>
+            yFinance 技術指標分析工具
+            <span class="app-badge">Gradio</span>
+          </div>
+          <div class="app-controls">
+            <div class="dot-ctrl dc-r"></div>
+            <div class="dot-ctrl dc-y"></div>
+            <div class="dot-ctrl dc-g"></div>
+          </div>
+        </div>
+        <div class="iframe-wrap">
+          <iframe
+            src="https://jacksue0216-yfinance-index.hf.space"
+            height="520"
+            loading="lazy"
+            title="股票技術指標分析 Gradio App"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab Panel: 股票數據查詢 ── -->
+    <div id="panel-data" class="tab-panel">
+      <div class="section-eyebrow">Module 02</div>
+      <div class="section-title">🔐 股票數據查詢系統</div>
+      <div class="section-sub">登入後即可查詢即時與歷史股票數據，支援多市場行情資訊查詢。</div>
+
+      <div class="features-row">
+        <div class="feat-tag"><span class="feat-icon">🔑</span> 帳號登入保護</div>
+        <div class="feat-tag"><span class="feat-icon">📡</span> 即時行情查詢</div>
+        <div class="feat-tag"><span class="feat-icon">🗂️</span> 歷史數據存取</div>
+        <div class="feat-tag"><span class="feat-icon">🌍</span> 多市場支援</div>
+      </div>
+
+      <div class="app-card">
+        <div class="app-card-header">
+          <div class="app-card-title">
+            <span>🔐</span>
+            yFinance 股票數據查詢系統
+            <span class="app-badge teal">Gradio</span>
+          </div>
+          <div class="app-controls">
+            <div class="dot-ctrl dc-r"></div>
+            <div class="dot-ctrl dc-y"></div>
+            <div class="dot-ctrl dc-g"></div>
+          </div>
+        </div>
+        <div class="iframe-wrap">
+          <iframe
+            src="https://jacksue0216-yfinance.hf.space"
+            height="520"
+            loading="lazy"
+            title="股票數據查詢 Gradio App"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab Panel: 雙工具全覽 ── -->
+    <div id="panel-both" class="tab-panel">
+      <div class="section-eyebrow">Dual View</div>
+      <div class="section-title">⚡ 雙工具並排全覽</div>
+      <div class="section-sub">左側進行技術指標計算與報告生成，右側同步查詢即時數據，提升分析效率。</div>
+
+      <div class="dual-grid">
+        <div class="app-card">
+          <div class="app-card-header">
+            <div class="app-card-title">
+              <span>📊</span>
+              技術指標分析
+              <span class="app-badge">Module 01</span>
+            </div>
+            <div class="app-controls">
+              <div class="dot-ctrl dc-r"></div>
+              <div class="dot-ctrl dc-y"></div>
+              <div class="dot-ctrl dc-g"></div>
+            </div>
+          </div>
+          <div class="iframe-wrap">
+            <iframe
+              src="https://jacksue0216-yfinance-index.hf.space"
+              height="480"
+              loading="lazy"
+              title="股票技術指標分析"
+            ></iframe>
+          </div>
+        </div>
+
+        <div class="app-card">
+          <div class="app-card-header">
+            <div class="app-card-title">
+              <span>🔐</span>
+              股票數據查詢
+              <span class="app-badge teal">Module 02</span>
+            </div>
+            <div class="app-controls">
+              <div class="dot-ctrl dc-r"></div>
+              <div class="dot-ctrl dc-y"></div>
+              <div class="dot-ctrl dc-g"></div>
+            </div>
+          </div>
+          <div class="iframe-wrap">
+            <iframe
+              src="https://jacksue0216-yfinance.hf.space"
+              height="480"
+              loading="lazy"
+              title="股票數據查詢"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ── -->
+    <footer>
+      <div class="footer-left">
+        <strong>FinScope</strong> — Powered by Gradio &amp; yFinance &nbsp;·&nbsp; 資料來源：Yahoo Finance
+      </div>
+      <div class="footer-links">
+        <a href="https://jacksue0216-yfinance-index.hf.space" target="_blank">技術指標工具</a>
+        <a href="https://jacksue0216-yfinance.hf.space" target="_blank">數據查詢系統</a>
+        <a href="https://huggingface.co" target="_blank">Hugging Face</a>
+      </div>
+    </footer>
+
+  </div><!-- /wrapper -->
+
+  <script>
+    function switchTab(name) {
+      // Hide all panels & deactivate buttons
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+      // Activate target
+      document.getElementById('panel-' + name).classList.add('active');
+
+      // Match button
+      const btns = document.querySelectorAll('.tab-btn');
+      const map = { index: 0, data: 1, both: 2 };
+      btns[map[name]].classList.add('active');
+    }
+  </script>
+
+</body>
+</html>
